@@ -29,9 +29,8 @@ let citysession;
 
     // Store in your variable
     ipsession = data.ip;
-    countrysession = data.country_name
-    citysession = data.city
-    console.log('My variable shani:', shani);
+    countrysession = data.country_name;
+    citysession = data.city;
   } catch (error) {
     console.error('Error fetching IP info:', error);
   }
