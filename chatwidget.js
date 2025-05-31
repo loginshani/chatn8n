@@ -51,7 +51,7 @@ function initializeChat() {
     chatState.messages = [
       {
         sender: 'agent',
-        content: 'Hello! How can I help you today?',
+        chatInput: 'Hello! How can I help you today?',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }
     ];
@@ -120,8 +120,9 @@ function handleEmailSubmit(event) {
       credentials: 'same-origin',
       body: JSON.stringify({
         sessionId: chatState.sessionId,
-        action: 'collectEmail',
-        email: email
+        action: 'sendMessage',
+        chatInput: email,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       })
     }).catch(error => console.warn('Error sending email:', error));
     
@@ -176,7 +177,7 @@ function addMessageToChat(sender, content) {
   
   chatState.messages.push({
     sender,
-    content,
+    chatInput: content,
     timestamp
   });
   
@@ -257,7 +258,8 @@ async function sendMessageToN8n(message) {
       body: JSON.stringify({
         sessionId: chatState.sessionId,
         action: 'sendMessage',
-        chatInput: message
+        chatInput: message,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       })
     });
 
