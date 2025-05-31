@@ -1,281 +1,104 @@
-/**
- * Chat Widget for n8n Integration
- * 
- * This script controls the behavior of the chat widget, providing a
- * minimizable interface that expands from a chat bubble to a full chat box.
- */
+(function() {
+  // Inject styles
+  const style = document.createElement("style");
+  style.textContent = `
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; line-height: 1.5; color: #333; }
+    #chat-widget-container { position: fixed; bottom: 2rem; right: 2rem; z-index: 1000; display: flex; flex-direction: column; align-items: flex-end; }
+    #chat-bubble { width: 60px; height: 60px; background-color: #3B82F6; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); position: relative; transition: transform 0.3s ease, box-shadow 0.3s ease; }
+    #chat-bubble:hover { transform: scale(1.05); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2); }
+    .chat-icon { color: white; }
+    .notification-badge { position: absolute; top: 0; right: 0; background-color: #EF4444; color: white; font-size: 12px; font-weight: 600; width: 20px; height: 20px; border-radius: 50%; display: flex; justify-content: center; align-items: center; transform: translate(25%, -25%); opacity: 0; transition: opacity 0.3s ease; }
+    .notification-badge.active { opacity: 1; }
+    #chat-box { position: absolute; bottom: 80px; right: 0; width: 350px; height: 450px; background-color: white; border-radius: 12px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15); display: flex; flex-direction: column; overflow: hidden; transform-origin: bottom right; transform: scale(0); opacity: 0; transition: transform 0.3s ease, opacity 0.3s ease; }
+    #chat-box.active { transform: scale(1); opacity: 1; }
+    #chat-header { background-color: #3B82F6; color: white; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-top-left-radius: 12px; border-top-right-radius: 12px; }
+    .header-info { display: flex; align-items: center; gap: 12px; }
+    .agent-avatar { width: 36px; height: 36px; background-color: rgba(255, 255, 255, 0.2); border-radius: 50%; display: flex; justify-content: center; align-items: center; }
+    .agent-icon { color: white; width: 20px; height: 20px; }
+    .header-text { display: flex; flex-direction: column; }
+    .agent-name { font-size: 16px; font-weight: 600; margin-bottom: 2px; }
+    .agent-status { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+    .status-indicator { width: 8px; height: 8px; border-radius: 50%; background-color: #9CA3AF; }
+    .status-indicator.online { background-color: #10B981; }
+    .header-actions button { background: none; border: none; color: white; cursor: pointer; opacity: 0.8; transition: opacity 0.2s ease; display: flex; align-items: center; justify-content: center; }
+    .header-actions button:hover { opacity: 1; }
+    #chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+    #chat-input-area { padding: 12px 16px; border-top: 1px solid #E5E7EB; }
+    #chat-form { display: flex; gap: 10px; }
+    #chat-input { flex: 1; padding: 10px 14px; border: 1px solid #D1D5DB; border-radius: 24px; font-size: 14px; outline: none; transition: border-color 0.2s ease; }
+    #chat-input:focus { border-color: #3B82F6; }
+    #send-btn { background: none; border: none; cursor: pointer; color: #3B82F6; display: flex; align-items: center; justify-content: center; }
+  `;
+  document.head.appendChild(style);
 
-// DOM Elements
-const chatWidgetContainer = document.getElementById('chat-widget-container');
-const chatBubble = document.getElementById('chat-bubble');
-const chatBox = document.getElementById('chat-box');
-const minimizeBtn = document.getElementById('minimize-btn');
-const chatForm = document.getElementById('chat-form');
-const chatInput = document.getElementById('chat-input');
-const chatMessages = document.getElementById('chat-messages');
-const notificationBadge = document.querySelector('.notification-badge');
+  // Create chat widget container
+  const widget = document.createElement("div");
+  widget.id = "chat-widget-container";
+  widget.innerHTML = `
+    <div id="chat-bubble">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="chat-icon"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+      <span class="notification-badge">0</span>
+    </div>
+    <div id="chat-box">
+      <div id="chat-header">
+        <div class="header-info">
+          <div class="agent-avatar">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="agent-icon"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="10" r="3"></circle><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"></path></svg>
+          </div>
+          <div class="header-text">
+            <h3 class="agent-name">Support Agent</h3>
+            <div class="agent-status">
+              <span class="status-indicator online"></span>
+              <span class="status-text">Online</span>
+            </div>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button id="minimize-btn" aria-label="Minimize chat">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          </button>
+        </div>
+      </div>
+      <div id="chat-messages"></div>
+      <div id="chat-input-area">
+        <form id="chat-form">
+          <input type="text" id="chat-input" placeholder="Type your message..." aria-label="Type your message" autocomplete="off">
+          <button type="submit" id="send-btn" aria-label="Send message">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="send-icon"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+          </button>
+        </form>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(widget);
 
-// Chat state
-const chatState = {
-  isOpen: false,
-  unreadCount: 0,
-  agentName: 'Support Agent',
-  agentStatus: 'online',
-  messages: [],
-  sessionId: 'a95057f6977d4a06af5757010e39868a' // Fixed session ID as specified
-};
+  // Functionality
+  const chatBubble = document.getElementById("chat-bubble");
+  const chatBox = document.getElementById("chat-box");
+  const minimizeBtn = document.getElementById("minimize-btn");
+  const chatForm = document.getElementById("chat-form");
+  const chatInput = document.getElementById("chat-input");
+  const chatMessages = document.getElementById("chat-messages");
 
-// n8n webhook URL
-const N8N_WEBHOOK_URL = 'https://primary-production-4ef44.up.railway.app/webhook/091a6209-157d-4bfd-8f64-733a65624da8/chat';
-
-// Event Listeners
-document.addEventListener('DOMContentLoaded', initializeChat);
-chatBubble.addEventListener('click', toggleChat);
-minimizeBtn.addEventListener('click', minimizeChat);
-chatForm.addEventListener('submit', handleMessageSubmit);
-chatInput.addEventListener('keydown', handleTyping);
-
-function initializeChat() {
-  updateNotificationBadge();
-  
-  if (chatState.messages.length === 0) {
-    chatState.messages = [
-      {
-        sender: 'agent',
-        content: 'Hello! How can I help you today?',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      }
-    ];
-  }
-  
-  scrollToBottom();
-}
-
-function toggleChat() {
-  if (chatState.isOpen) {
-    minimizeChat();
-  } else {
-    expandChat();
-  }
-}
-
-function expandChat() {
-  chatBox.classList.add('active');
-  chatState.isOpen = true;
-  chatState.unreadCount = 0;
-  updateNotificationBadge();
-  notifyChatOpened();
-  
-  setTimeout(() => {
-    chatInput.focus();
-  }, 300);
-  
-  scrollToBottom();
-}
-
-function minimizeChat() {
-  chatBox.classList.remove('active');
-  chatState.isOpen = false;
-  notifyChatMinimized();
-}
-
-function handleMessageSubmit(event) {
-  event.preventDefault();
-  
-  const messageText = chatInput.value.trim();
-  if (!messageText) return;
-  
-  addMessageToChat('user', messageText);
-  chatInput.value = '';
-  sendMessageToN8n(messageText);
-  showTypingIndicator();
-}
-
-function addMessageToChat(sender, content) {
-  const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  
-  const messageDiv = document.createElement('div');
-  messageDiv.classList.add('message', `${sender}-message`);
-  
-  const messageContent = document.createElement('div');
-  messageContent.classList.add('message-content');
-  
-  const messagePara = document.createElement('p');
-  messagePara.textContent = content;
-  messageContent.appendChild(messagePara);
-  
-  const timeSpan = document.createElement('span');
-  timeSpan.classList.add('message-time');
-  timeSpan.textContent = timestamp;
-  messageContent.appendChild(timeSpan);
-  
-  messageDiv.appendChild(messageContent);
-  chatMessages.appendChild(messageDiv);
-  
-  chatState.messages.push({
-    sender,
-    content,
-    timestamp
+  chatBubble.addEventListener("click", () => {
+    chatBox.classList.add("active");
   });
-  
-  scrollToBottom();
-  
-  if (!chatState.isOpen && sender === 'agent') {
-    chatState.unreadCount++;
-    updateNotificationBadge();
-  }
-  
-  saveMessageHistory();
-}
 
-function showTypingIndicator() {
-  const typingDiv = document.createElement('div');
-  typingDiv.classList.add('typing-indicator');
-  typingDiv.id = 'typing-indicator';
-  
-  for (let i = 0; i < 3; i++) {
-    const dot = document.createElement('div');
-    dot.classList.add('typing-dot');
-    typingDiv.appendChild(dot);
-  }
-  
-  chatMessages.appendChild(typingDiv);
-  scrollToBottom();
-}
+  minimizeBtn.addEventListener("click", () => {
+    chatBox.classList.remove("active");
+  });
 
-function removeTypingIndicator() {
-  const typingIndicator = document.getElementById('typing-indicator');
-  if (typingIndicator) {
-    typingIndicator.remove();
-  }
-}
-
-function handleTyping(event) {
-  // Optional: Add "user is typing" indicator
-}
-
-function updateNotificationBadge() {
-  if (chatState.unreadCount > 0) {
-    notificationBadge.textContent = chatState.unreadCount > 9 ? '9+' : chatState.unreadCount;
-    notificationBadge.classList.add('active');
-  } else {
-    notificationBadge.classList.remove('active');
-  }
-}
-
-function scrollToBottom() {
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-}
-
-function updateAgentStatus(status) {
-  const statusIndicator = document.querySelector('.status-indicator');
-  const statusText = document.querySelector('.status-text');
-  
-  chatState.agentStatus = status;
-  
-  if (status === 'online') {
-    statusIndicator.classList.add('online');
-    statusText.textContent = 'Online';
-  } else {
-    statusIndicator.classList.remove('online');
-    statusText.textContent = 'Offline';
-  }
-}
-
-async function sendMessageToN8n(message) {
-  try {
-    const response = await fetch(N8N_WEBHOOK_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      mode: 'cors',
-      credentials: 'same-origin',
-      body: JSON.stringify({
-        sessionId: chatState.sessionId,
-        action: 'sendMessage',
-        chatInput: message
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+  chatForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const message = chatInput.value.trim();
+    if (message) {
+      const msgEl = document.createElement("div");
+      msgEl.className = "message user-message";
+      msgEl.innerHTML = `<div class="message-content"><p>${message}</p><span class="message-time">${new Date().toLocaleTimeString()}</span></div>`;
+      chatMessages.appendChild(msgEl);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      chatInput.value = "";
     }
-
-    const data = await response.json();
-    
-    removeTypingIndicator();
-    
-    if (data.output) {
-      addMessageToChat('agent', data.output);
-    }
-  } catch (error) {
-    console.error('Error sending message to n8n:', error);
-    removeTypingIndicator();
-    addMessageToChat('agent', 'Sorry, I encountered an error. Please try again later.');
-  }
-}
-
-function saveMessageHistory() {
-  localStorage.setItem('chatHistory', JSON.stringify(chatState.messages));
-}
-
-async function notifyChatOpened() {
-  try {
-    const response = await fetch(N8N_WEBHOOK_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      mode: 'cors',
-      credentials: 'same-origin',
-      body: JSON.stringify({
-        sessionId: chatState.sessionId,
-        action: 'chatOpened'
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-  } catch (error) {
-    console.warn('Error notifying chat opened:', error);
-  }
-}
-
-async function notifyChatMinimized() {
-  try {
-    const response = await fetch(N8N_WEBHOOK_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      mode: 'cors',
-      credentials: 'same-origin',
-      body: JSON.stringify({
-        sessionId: chatState.sessionId,
-        action: 'chatMinimized'
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-  } catch (error) {
-    console.warn('Error notifying chat minimized:', error);
-  }
-}
-
-function receiveMessageFromN8n(message) {
-  addMessageToChat('agent', message);
-}
-
-window.chatWidget = {
-  receiveMessage: receiveMessageFromN8n,
-  updateStatus: updateAgentStatus,
-  openChat: expandChat,
-  closeChat: minimizeChat
-};
+  });
+})();
