@@ -29,9 +29,10 @@ let chatState = {
   agentName: 'Support',
   agentStatus: 'online',
   messages: [],
-  sessionId: hasShownEmailForm || '',
-  emailCollected: hasShownEmailForm?true:false
+  sessionId: hasShownEmailForm || random,
+  emailCollected: hasShownEmailForm&&hasShownEmailForm.match(/.+@.+\..+/)?true:false
 };
+console.log("emaio",hasShownEmailForm,chatState.emailCollected)
 // n8n webhook URL
 const N8N_WEBHOOK_URL = 'https://primary-production-4ef44.up.railway.app/webhook/091a6209-157d-4bfd-8f64-733a65624da8/chat';
 
@@ -76,7 +77,8 @@ function expandChat() {
   notifyChatOpened();
   
   // Show email collection form if not shown before
-  if (!hasShownEmailForm && !chatState.emailCollected) {
+  console.log("emaiodd",!hasShownEmailForm , !chatState.emailCollected)
+  if (!chatState.emailCollected) {
     showEmailForm();
   }
   
@@ -93,7 +95,7 @@ function minimizeChat() {
   notifyChatMinimized();
 }
 
-function handleEmailSubmit(event) {
+async function handleEmailSubmit(event) {
   event.preventDefault();
   const emailInput = document.getElementById('email-input');
   const email = emailInput.value.trim();
@@ -106,11 +108,11 @@ function handleEmailSubmit(event) {
   agentName: 'Support',
   agentStatus: 'online',
   messages: [],
-  sessionId: email || '',
-  emailCollected: false
+  sessionId: email || random,
+  emailCollected: true
 };
     // Send email to n8n
-    fetch(N8N_WEBHOOK_URL, {
+    const response =await fetch(N8N_WEBHOOK_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -125,10 +127,25 @@ function handleEmailSubmit(event) {
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       })
     }).catch(error => console.warn('Error sending email:', error));
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    removeTypingIndicator();
+    
+    if (data.output) {
+      addMessageToChat('agent', data.output);
+    }
     
   }
+  else
+  {
+  
+  localStorage.setItem('emailFormShown', undefined);
+  }
   document.addEventListener('DOMContentLoaded', initializeChat);
-  localStorage.setItem('emailFormShown', null);
   hideEmailForm();
 }
 
@@ -286,51 +303,51 @@ function saveMessageHistory() {
 }
 
 async function notifyChatOpened() {
-  try {
-    const response = await fetch(N8N_WEBHOOK_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      mode: 'cors',
-      credentials: 'same-origin',
-      body: JSON.stringify({
-        sessionId: chatState.sessionId,
-        action: 'chatOpened'
-      })
-    });
+//   try {
+//     const response = await fetch(N8N_WEBHOOK_URL, {
+//       method: 'POST',
+//       headers: {
+//         'Content-Type': 'application/json',
+//         'Accept': 'application/json'
+//       },
+//       mode: 'cors',
+//       credentials: 'same-origin',
+//       body: JSON.stringify({
+//         sessionId: chatState.sessionId,
+//         action: 'chatOpened'
+//       })
+//     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-  } catch (error) {
-    console.warn('Error notifying chat opened:', error);
-  }
+//     if (!response.ok) {
+//       throw new Error(`HTTP error! status: ${response.status}`);
+//     }
+//   } catch (error) {
+//     console.warn('Error notifying chat opened:', error);
+//   }
 }
 
 async function notifyChatMinimized() {
-  try {
-    const response = await fetch(N8N_WEBHOOK_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      mode: 'cors',
-      credentials: 'same-origin',
-      body: JSON.stringify({
-        sessionId: chatState.sessionId,
-        action: 'chatMinimized'
-      })
-    });
+//   try {
+//     const response = await fetch(N8N_WEBHOOK_URL, {
+//       method: 'POST',
+//       headers: {
+//         'Content-Type': 'application/json',
+//         'Accept': 'application/json'
+//       },
+//       mode: 'cors',
+//       credentials: 'same-origin',
+//       body: JSON.stringify({
+//         sessionId: chatState.sessionId,
+//         action: 'chatMinimized'
+//       })
+//     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-  } catch (error) {
-    console.warn('Error notifying chat minimized:', error);
-  }
+//     if (!response.ok) {
+//       throw new Error(`HTTP error! status: ${response.status}`);
+//     }
+//   } catch (error) {
+//     console.warn('Error notifying chat minimized:', error);
+//   }
 }
 
 function receiveMessageFromN8n(message) {
