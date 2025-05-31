@@ -537,6 +537,6 @@ body {
   `;
   document.body.appendChild(widget);
 var jQueryScript = document.createElement('script');  
-jQueryScript.setAttribute('src','https://cdn.jsdelivr.net/gh/loginshani/chatn8n@main/chatwidget.js');
+jQueryScript.setAttribute('src','chatwidget.js');
 document.head.appendChild(jQueryScript);
 })();
