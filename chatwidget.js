@@ -16,13 +16,34 @@ const chatMessages = document.getElementById('chat-messages');
 const notificationBadge = document.querySelector('.notification-badge');
 
 // Chat state
+
+let ipsession; // variable to store the IP
+let countrysession;
+let citysession;
+
+(async () => {
+  try {
+    const response = await fetch('https://ipapi.co/json/');
+    const data = await response.json();
+    console.log('IP Address:', data.ip);
+
+    // Store in your variable
+    ipsession = data.ip;
+    countrysession = data.country_name
+    citysession = data.city
+    console.log('My variable shani:', shani);
+  } catch (error) {
+    console.error('Error fetching IP info:', error);
+  }
+})();
+
 const chatState = {
   isOpen: false,
   unreadCount: 0,
   agentName: 'Support Agent',
   agentStatus: 'online',
   messages: [],
-  sessionId: 'a95057f6977d4a06af5757010e39868a' // Fixed session ID as specified
+  sessionId: ipsession+'_'+countrysession+'_'+citysession
 };
 
 // n8n webhook URL
