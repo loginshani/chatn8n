@@ -14,46 +14,35 @@ const chatForm = document.getElementById('chat-form');
 const chatInput = document.getElementById('chat-input');
 const chatMessages = document.getElementById('chat-messages');
 const notificationBadge = document.querySelector('.notification-badge');
+const emailCollection = document.getElementById('email-collection');
+const emailForm = document.getElementById('email-form');
+const skipEmailBtn = document.getElementById('skip-email');
+const random=(((1+Math.random())*0x10000)|0).toString(16).substring(1);
 
+
+// Check if email collection was already shown
+const hasShownEmailForm = localStorage.getItem('emailFormShown');
 // Chat state
-
-let ipsession; // variable to store the IP
-let countrysession;
-let citysession;
-
-(async () => {
-  try {
-    const response = await fetch('https://ipapi.co/json/');
-    const data = await response.json();
-    console.log('IP Address:', data.ip);
-
-    // Store in your variable
-    ipsession = data.ip;
-    countrysession = data.country_name;
-    citysession = data.city;
-  } catch (error) {
-    console.error('Error fetching IP info:', error);
-  }
-})();
-
-const chatState = {
+let chatState = {
   isOpen: false,
   unreadCount: 0,
-  agentName: 'Support Agent',
+  agentName: 'Support',
   agentStatus: 'online',
   messages: [],
-  sessionId: ipsession+'_'+countrysession+'_'+citysession
+  sessionId: hasShownEmailForm || '',
+  emailCollected: hasShownEmailForm?true:false
 };
-
 // n8n webhook URL
 const N8N_WEBHOOK_URL = 'https://primary-production-4ef44.up.railway.app/webhook/091a6209-157d-4bfd-8f64-733a65624da8/chat';
 
 // Event Listeners
-document.addEventListener('DOMContentLoaded', initializeChat);
+
 chatBubble.addEventListener('click', toggleChat);
 minimizeBtn.addEventListener('click', minimizeChat);
 chatForm.addEventListener('submit', handleMessageSubmit);
 chatInput.addEventListener('keydown', handleTyping);
+emailForm.addEventListener('submit', handleEmailSubmit);
+skipEmailBtn.addEventListener('click', hideEmailForm);
 
 function initializeChat() {
   updateNotificationBadge();
@@ -86,6 +75,11 @@ function expandChat() {
   updateNotificationBadge();
   notifyChatOpened();
   
+  // Show email collection form if not shown before
+  if (!hasShownEmailForm && !chatState.emailCollected) {
+    showEmailForm();
+  }
+  
   setTimeout(() => {
     chatInput.focus();
   }, 300);
@@ -97,6 +91,54 @@ function minimizeChat() {
   chatBox.classList.remove('active');
   chatState.isOpen = false;
   notifyChatMinimized();
+}
+
+function handleEmailSubmit(event) {
+  event.preventDefault();
+  const emailInput = document.getElementById('email-input');
+  const email = emailInput.value.trim();
+  
+  if (email) {
+    localStorage.setItem('emailFormShown', email);
+    chatState={
+  isOpen: false,
+  unreadCount: 0,
+  agentName: 'Support',
+  agentStatus: 'online',
+  messages: [],
+  sessionId: email || '',
+  emailCollected: false
+};
+    // Send email to n8n
+    fetch(N8N_WEBHOOK_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      mode: 'cors',
+      credentials: 'same-origin',
+      body: JSON.stringify({
+        sessionId: chatState.sessionId,
+        action: 'collectEmail',
+        email: email
+      })
+    }).catch(error => console.warn('Error sending email:', error));
+    
+  }
+  document.addEventListener('DOMContentLoaded', initializeChat);
+  localStorage.setItem('emailFormShown', null);
+  hideEmailForm();
+}
+
+function showEmailForm() {
+  emailCollection.classList.add('active');
+}
+
+function hideEmailForm() {
+  emailCollection.classList.remove('active');
+  
+  chatState.emailCollected = true;
 }
 
 function handleMessageSubmit(event) {
