@@ -2,7 +2,7 @@
   // Inject styles
   const style = document.createElement("style");
   style.textContent = `
-    * {
+   * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -94,6 +94,86 @@ body {
 #chat-box.active {
   transform: scale(1);
   opacity: 1;
+}
+
+/* Email Collection Form */
+#email-collection {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: white;
+  z-index: 2;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+}
+
+#email-collection.active {
+  transform: translateY(0);
+}
+
+#email-collection h3 {
+  color: #1F2937;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+#email-collection p {
+  color: #6B7280;
+  font-size: 0.875rem;
+  margin-bottom: 1.5rem;
+}
+
+#email-form {
+  width: 100%;
+  max-width: 300px;
+}
+
+#email-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #D1D5DB;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+
+#email-form button {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: #3B82F6;
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+#email-form button:hover {
+  background-color: #2563EB;
+}
+
+#skip-email {
+  background: none;
+  border: none;
+  color: #6B7280;
+  font-size: 0.875rem;
+  margin-top: 1rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+#skip-email:hover {
+  color: #4B5563;
 }
 
 /* Chat Header */
@@ -378,6 +458,22 @@ body {
 
     <!-- Chat Box (Expanded State) -->
     <div id="chat-box">
+      <!-- Email Collection Form -->
+      <div id="email-collection">
+        <h3>Welcome to Chat Support!</h3>
+        <p>Enter your email to receive updates about your conversation (optional)</p>
+        <form id="email-form">
+          <input 
+            type="email" 
+            id="email-input" 
+            placeholder="Your email address"
+            aria-label="Your email address"
+          >
+          <button type="submit">Continue</button>
+        </form>
+        <button id="skip-email">Skip for now</button>
+      </div>
+
       <!-- Chat Header -->
       <div id="chat-header">
         <div class="header-info">
@@ -411,10 +507,12 @@ body {
       <!-- Chat Messages Container -->
       <div id="chat-messages">
         <!-- n8n INTEGRATION: This area will be populated with messages from n8n -->
-        
-        
-       
-        <!-- n8n INTEGRATION: Messages above are placeholders -->
+        <div class="message agent-message">
+          <div class="message-content">
+            <p>Hello! How can I help you today?</p>
+            <span class="message-time">10:00 AM</span>
+          </div>
+        </div>
       </div>
 
       <!-- Chat Input Area -->
@@ -434,7 +532,6 @@ body {
             </svg>
           </button>
         </form>
-        <!-- n8n INTEGRATION: Add any additional input elements needed -->
       </div>
     </div>
   `;
